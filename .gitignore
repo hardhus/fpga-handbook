@@ -1,0 +1,21 @@
+# --- Vivado Genel Temizlik ---
+
+# İsmi ne olursa olsun bu uzantıyla biten klasörleri her yerde engelle
+**/*.cache/
+**/*.hw/
+**/*.sim/
+**/*.ip_user_files/
+**/*.runs/
+**/*.srcs/
+**/*.dcp
+
+# Vivado'nun ana dizine kustuğu log ve journal dosyaları
+*.log
+*.jou
+*.str
+*.pb
+*.vdi
+
+# Geçici dizinler
+.Xil/
+**/.Xil/
