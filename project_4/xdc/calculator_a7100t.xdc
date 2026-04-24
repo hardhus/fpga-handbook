@@ -215,4 +215,4 @@ set_property -dict {PACKAGE_PIN P18 IOSTANDARD LVCMOS33} [get_ports {buttons[1]}
 
 
 set_property BITSTREAM.General.UnconstrainedPins {Allow} [current_design]
-set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins g_USE_PLL.u_sys_pll/inst/mmcm_adv_inst/CLKOUT0]]
+set_clock_groups -asynchronous -group [get_clocks -of_objects [get_pins -hier -filter {NAME =~ *u_sys_pll/*/CLKOUT0}]]
