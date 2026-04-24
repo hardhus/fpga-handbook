@@ -7,6 +7,7 @@
 **/*.ip_user_files/
 **/*.runs/
 **/*.srcs/
+**/*.gen/
 **/*.dcp
 
 # Vivado'nun ana dizine kustuğu log ve journal dosyaları
@@ -19,3 +20,7 @@
 # Geçici dizinler
 .Xil/
 **/.Xil/
+
+
+**/ip/**/*
+!**/ip/**/*.xci
