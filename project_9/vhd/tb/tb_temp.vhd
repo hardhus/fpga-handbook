@@ -45,8 +45,8 @@ architecture test of tb_temp is
   constant SMOOTHING    : natural := 16;
 
   signal clk : std_logic := '0';
-  signal SW  : std_logic := '0';
-  signal LED : std_logic;
+  signal SW  : std_logic_vector(1 downto 0) := "00";
+  signal LED : std_logic_vector(1 downto 0);
 
   -- temp sensor interface
   signal TMP_SCL : std_logic;
@@ -110,26 +110,40 @@ begin
     report "[" & to_string(now) & "] Simulation starting...";
     report "========================================";
 
-    SW   <= '0';
-    TEMP <= 9d"20" & 4d"8" & "000";  -- 20.5 °C
-    report "[" & to_string(now) & "] Phase 1: Waiting for 20.5°C (Filling FIFO)...";
+    -- --- PHASE 1: Celsius Mode with Positive Temp ---
+    SW   <= "00";
+    TEMP <= "000010100" & "1000" & "000";  -- +20.5 °C
+    report "[" & to_string(now) & "] Phase 1: Testing Celsius with +20.5 C (Filling FIFO)...";
     for i in 1 to 100000 loop wait until rising_edge(clk); end loop;
 
-    SW   <= '1';
-    report "[" & to_string(now) & "] Phase 2: SW=1 set (Testing Fahrenheit conversion)...";
+    -- --- PHASE 2: Fahrenheit Mode with Positive Temp ---
+    SW   <= "01";
+    report "[" & to_string(now) & "] Phase 2: SW set to 01 (Testing Fahrenheit conversion)...";
     for i in 1 to 100000 loop wait until rising_edge(clk); end loop;
 
+    -- --- PHASE 3: Kelvin Mode with Positive Temp ---
+    SW   <= "10";
+    report "[" & to_string(now) & "] Phase 3: SW set to 10 (Testing Kelvin conversion with +20.5 C)...";
+    for i in 1 to 100000 loop wait until rising_edge(clk); end loop;
+
+    -- --- PHASE 4: Celsius Mode with Negative Temp ---
     TEMP <= std_logic_vector(to_signed(-20, 9)) & "1000" & "000"; -- -20.5 °C
-    SW   <= '0';
-    report "[" & to_string(now) & "] Phase 3: Waiting for -20.5°C...";
+    SW   <= "00";
+    report "[" & to_string(now) & "] Phase 4: Testing Celsius with -20.5 C...";
     for i in 1 to 100000 loop wait until rising_edge(clk); end loop;
 
-    SW   <= '1';
-    report "[" & to_string(now) & "] Phase 4: Testing Fahrenheit for negative temperature...";
+    -- --- PHASE 5: Fahrenheit Mode with Negative Temp ---
+    SW   <= "01";
+    report "[" & to_string(now) & "] Phase 5: SW set to 01 (Testing Fahrenheit for negative temp)...";
+    for i in 1 to 100000 loop wait until rising_edge(clk); end loop;
+
+    -- --- PHASE 6: Kelvin Mode with Negative Temp ---
+    SW   <= "10";
+    report "[" & to_string(now) & "] Phase 6: SW set to 10 (Testing Kelvin for negative temp)...";
     for i in 1 to 100000 loop wait until rising_edge(clk); end loop;
 
     report "========================================";
-    report "[" & to_string(now) & "] Test completed successfully! Calling std.env.finish.";
+    report "[" & to_string(now) & "] Challenge test completed successfully! Calling std.env.finish.";
     report "========================================";
     finish;
   end process;

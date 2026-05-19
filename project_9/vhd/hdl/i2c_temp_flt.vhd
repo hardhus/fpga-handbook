@@ -57,9 +57,9 @@ entity i2c_temp is
     TMP_CT  : inout std_logic;          -- currently unused
 
     -- Switch Interface
-    SW      : in    std_logic;
+    SW      : in    std_logic_vector(1 downto 0);
     -- LED Interface
-    LED     : out   std_logic;
+    LED     : out   std_logic_vector(1 downto 0);
     -- 7 segment display
     anode   : out   std_logic_vector(NUM_SEGMENTS - 1 downto 0);
     cathode : out   std_logic_vector(7 downto 0)
@@ -94,6 +94,7 @@ architecture rtl of i2c_temp is
 
   constant NINE_FIFTHS : std_logic_vector(31 downto 0) := x"3fe66666"; -- 9/5 in floating point
   constant THIRTY_TWO  : std_logic_vector(31 downto 0) := x"42000000"; -- floating point
+  constant KELVIN_OFFSET : std_logic_vector(31 downto 0) := x"43889333"; -- 273.15 FP
 
   constant FRACTION_TABLE : slv16_array_t := (
     0  => std_logic_vector(to_unsigned(0 * 625, 16)),
@@ -191,6 +192,11 @@ architecture rtl of i2c_temp is
   attribute MARK_DEBUG of rden : signal is "TRUE";
   attribute MARK_DEBUG of convert_pipe : signal is "TRUE";
 
+  signal fma_b      : std_logic_vector(31 downto 0);
+  signal fma_c      : std_logic_vector(31 downto 0);
+  signal sym_degree : std_logic_vector(3 downto 0);
+  signal sym_unit   : std_logic_vector(3 downto 0);
+  
 begin
 
   assert SMOOTHING <= 16 report "SMOOTHING factor must be <= 16" severity failure;
@@ -360,6 +366,26 @@ begin
         m_axis_result_tvalid => smooth_convert,
         m_axis_result_tdata  => smooth_data
       );
+    
+    process(SW)
+    begin
+      -- FMA Input Multiplexer
+      if SW = "10" then
+        fma_b <= x"3F800000"; -- 1.0
+        fma_c <= KELVIN_OFFSET;
+      else
+        fma_b <= NINE_FIFTHS; -- 1.8
+        fma_c <= THIRTY_TWO;
+      end if;
+      
+      -- Display Symbol Multiplexer
+      case SW is
+        when "00" => sym_degree <= x"A"; sym_unit <= x"C"; -- °C
+        when "01" => sym_degree <= x"A"; sym_unit <= x"F"; -- °F
+        when "10" => sym_degree <= x"E"; sym_unit <= x"B"; -- [Blank] H
+        when others => sym_degree <= x"E"; sym_unit <= x"E";
+      end case;
+    end process;
 
     u_fp_fused_mult_add : fp_fused_mult_add
       port map(
@@ -367,9 +393,9 @@ begin
         s_axis_a_tvalid      => result_valid,
         s_axis_a_tdata       => result_data,
         s_axis_b_tvalid      => result_valid,
-        s_axis_b_tdata       => NINE_FIFTHS,
+        s_axis_b_tdata       => fma_b,
         s_axis_c_tvalid      => result_valid,
-        s_axis_c_tdata       => THIRTY_TWO,
+        s_axis_c_tdata       => fma_c,
         m_axis_result_tvalid => fused_valid,
         m_axis_result_tdata  => fused_data
       );
@@ -421,10 +447,14 @@ begin
         -- Stage 3: output temperature in degrees C
         if result_valid then
           temperature       <= result_data;
-          temperature_valid <= not SW;
+          if SW = "00" then
+            temperature_valid <= '1';
+          else
+            temperature_valid <= '0';
+          end if;
         end if;
         -- Stage 4: output temperature in degrees F
-        if SW and fused_valid then
+        if SW /= "00" and fused_valid = '1' then
           temperature       <= fused_data;
           temperature_valid <= '1';
         end if;
@@ -470,6 +500,13 @@ begin
   end process;
 
   digit_point <= "00010000";
-  encoded     <= encoded_int(3 downto 0) & encoded_frac(3 downto 0);
+  encoded(7) <= x"0";             -- Anode 7 (Leftmost): Solid Blank (Off)
+  encoded(6) <= encoded_int(2);   -- Anode 6: Hundreds digit (Displays 0 for C/F, 2 for Kelvin)
+  encoded(5) <= encoded_int(1);   -- Anode 5: Tens digit
+  encoded(4) <= encoded_int(0);   -- Anode 4: Units digit
+  encoded(3) <= encoded_frac(3);  -- Anode 3: Tenths digit
+  encoded(2) <= encoded_frac(2);  -- Anode 2: Hundredths digit
+  encoded(1) <= sym_degree;       -- Anode 1: Degree symbol (°) or Blank
+  encoded(0) <= sym_unit;         -- Anode 0 (Rightmost): Unit identifier (C, F, or H)
 
 end architecture;

@@ -62,12 +62,20 @@ process(clk)
         when x"7"   => cathode_reg <= "1111000";
         when x"8"   => cathode_reg <= "0000000";
         when x"9"   => cathode_reg <= "0010000";
-        when x"A"   => cathode_reg <= "0001000";
-        when x"B"   => cathode_reg <= "0000011";
-        when x"C"   => cathode_reg <= "1000110";
+        -- when x"A"   => cathode_reg <= "0001000";
+        -- when x"B"   => cathode_reg <= "0000011";
+        -- when x"C"   => cathode_reg <= "1000110";
         when x"D"   => cathode_reg <= "0100001";
-        when x"E"   => cathode_reg <= "0000110";
-        when x"F"   => cathode_reg <= "0001110";
+        -- when x"E"   => cathode_reg <= "0000110";
+        -- when x"F"   => cathode_reg <= "0001110";
+        
+        -- Challenge Special Character Definitions
+        when x"A"   => cathode_reg <= "0011100"; -- Degree Mark (°)
+        when x"B"   => cathode_reg <= "0001001"; -- Letter H (for Kelvin Notation)
+        when x"C"   => cathode_reg <= "1000110"; -- Letter C (Celsius)
+        when x"F"   => cathode_reg <= "0001110"; -- Letter F (Fahrenheit)
+        when x"E"   => cathode_reg <= "1111111"; -- Explicit Blank / Off
+        
         when others => cathode_reg <= "0001110";
       end case;
     end if;
