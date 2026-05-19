@@ -1,22 +1,22 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
+// Company:
+// Engineer:
+//
 // Create Date: 23.04.2026 18:11:58
-// Design Name: 
+// Design Name:
 // Module Name: cathode_top
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
 // Revision:
 // Revision 0.01 - File Created
 // Additional Comments:
-// 
+//
 //////////////////////////////////////////////////////////////////////////////////
 
 
@@ -40,12 +40,20 @@ module cathode_top (
       4'h7: cathode[6:0] <= 7'b1111000;
       4'h8: cathode[6:0] <= 7'b0000000;
       4'h9: cathode[6:0] <= 7'b0010000;
-      4'hA: cathode[6:0] <= 7'b0001000;
-      4'hB: cathode[6:0] <= 7'b0000011;
-      4'hC: cathode[6:0] <= 7'b1000110;
+      // 4'hA: cathode[6:0] <= 7'b0001000;
+      // 4'hB: cathode[6:0] <= 7'b0000011;
+      // 4'hC: cathode[6:0] <= 7'b1000110;
       4'hD: cathode[6:0] <= 7'b0100001;
-      4'hE: cathode[6:0] <= 7'b0000110;
-      4'hF: cathode[6:0] <= 7'b0001110;
+      // 4'hE: cathode[6:0] <= 7'b0000110;
+      // 4'hF: cathode[6:0] <= 7'b0001110;
+
+      // Challenge Special Character Definitions
+      4'hA: cathode[6:0] <= 7'b0011100;  // Degree Mark (°)
+      4'hB: cathode[6:0] <= 7'b0001001;  // Letter H (for Kelvin Notation)
+      4'hC: cathode[6:0] <= 7'b1000110;  // Letter C (Celsius - Restored!)
+      4'hF: cathode[6:0] <= 7'b0001110;  // Letter F (Fahrenheit)
+      4'hE: cathode[6:0] <= 7'b1111111;  // Explicit Blank / Off (All segments dark)
+
       default: cathode[6:0] <= 7'b1111111;
     endcase
   end  // always_ff

@@ -33,9 +33,9 @@ module i2c_temp_flt #(
     inout  wire                     TMP_INT,
     inout  wire                     TMP_CT,
     // switch interface
-    input  wire                     SW,
+    input  wire  [             1:0] SW,
     // LED interface
-    output logic                    LED,
+    output logic [             1:0] LED,
     // 7 segment display
     output logic [NUM_SEGMENTS-1:0] anode,
     output logic [             7:0] cathode
@@ -222,10 +222,11 @@ module i2c_temp_flt #(
       (* mark_debug = "true" *)float_u                       temperature;
       (* mark_debug = "true" *)logic                         temperature_valid;
       (* mark_debug = "true" *)logic     [              2:0] convert_pipe;
-      logic     [             31:0] divide                                       [17];
+      logic     [             31:0] divide                                                    [17];
       const bit [             31:0] nine_fifths = 32'h3fe66666;  // 9/5 in FP
       const bit [             31:0] thirty_two = 32'h42000000;  // Floating point
-      (* mark_debug = "true" *)logic     [             31:0] mult_in                                      [ 2];
+      const bit [             31:0] kelvin_offset = 32'h43889333;  // 273.15 in Floating Point
+      (* mark_debug = "true" *)logic     [             31:0] mult_in                                                   [ 2];
       (* mark_debug = "true" *)logic                         mult_in_valid;
       logic     [             31:0] fused_data;
       logic                         fused_valid;
@@ -300,14 +301,27 @@ module i2c_temp_flt #(
           .m_axis_result_tdata (smooth_data)
       );
 
+      logic [31:0] fma_b;
+      logic [31:0] fma_c;
+
+      always_comb begin
+        if (SW == 2'b10) begin
+          fma_b = 32'h3F800000;  // 1.0
+          fma_c = kelvin_offset;  // 273.15
+        end else begin
+          fma_b = nine_fifths;  // 1.8
+          fma_c = thirty_two;  // 32.0
+        end
+      end  // always_comb
+
       fp_fused_mult_add u_fp_fused_mult_add (
           .aclk                (clk),
           .s_axis_a_tvalid     (result_valid),
           .s_axis_a_tdata      (result_data.raw),
           .s_axis_b_tvalid     (result_valid),
-          .s_axis_b_tdata      (nine_fifths),
+          .s_axis_b_tdata      (fma_b),
           .s_axis_c_tvalid     (result_valid),
-          .s_axis_c_tdata      (thirty_two),
+          .s_axis_c_tdata      (fma_c),
           .m_axis_result_tvalid(fused_valid),
           .m_axis_result_tdata (fused_data)
       );
@@ -351,10 +365,10 @@ module i2c_temp_flt #(
         if (result_valid) begin
           temperature.fp    <= result_data.fp;
           //temperature.fp.exponent <= result_data.fp.exponent - 4;
-          temperature_valid <= ~SW;
+          temperature_valid <= (SW == 2'b00);
         end
         // Fahrenheit conversion
-        if (SW && fused_valid) begin
+        if ((SW != 2'b00) && fused_valid) begin
           temperature.raw   <= fused_data;
           temperature_valid <= '1;
         end
@@ -405,6 +419,30 @@ module i2c_temp_flt #(
     for (int i = 0; i < 16; i++) fraction_table[i] = i * 625;
   end
 
+  logic [3:0] sym_degree;
+  logic [3:0] sym_unit;
+
+  always_comb begin
+    case (SW)
+      2'b00: begin
+        sym_degree = 4'hA;
+        sym_unit   = 4'hC;
+      end  // °C
+      2'b01: begin
+        sym_degree = 4'hA;
+        sym_unit   = 4'hF;
+      end  // °F
+      2'b10: begin
+        sym_degree = 4'hE;
+        sym_unit   = 4'hB;
+      end  // [Blank] H (Kelvin)
+      default: begin
+        sym_degree = 4'hE;
+        sym_unit   = 4'hE;
+      end  // [Blank] [Blank]
+    endcase
+  end  // always_comb
+
   // convert temperature from
   always @(posedge clk) begin
     digit_point <= 8'b00010000;
@@ -419,6 +457,16 @@ module i2c_temp_flt #(
     end
   end  // always @ (posedge clk)
 
-  assign encoded = {encoded_int[3:0], fraction[3:0]};
+  // Final mapping: Left to right display arrangement
+  assign encoded = {
+    4'h0,  // Anode 7 (Leftmost): Solid 0 as requested
+    encoded_int[2],  // Anode 6: Hundreds digit (Displays 0 for C/F, 2 for Kelvin)
+    encoded_int[1],  // Anode 5: Tens digit
+    encoded_int[0],  // Anode 4: Units digit (Decimal point is here)
+    fraction[3],  // Anode 3: Tenths digit
+    fraction[2],  // Anode 2: Hundredths digit
+    sym_degree,  // Anode 1: Degree symbol (°) or Blank for K
+    sym_unit  // Anode 0 (Rightmost): Unit identifier (C, F, or H)
+  };
 
 endmodule

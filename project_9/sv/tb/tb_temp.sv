@@ -26,8 +26,9 @@ module tb_temp_flt;
   parameter NUM_SEGMENTS = 8;
   parameter CLK_PER = 20;
 
-  logic clk;
-  logic SW, LED;
+  logic                           clk;
+  logic        [             1:0] SW;  // Updated to 2-bit to support 3 temperature scales
+  logic        [             1:0] LED;  // Updated to 2-bit to monitor scale status
 
   // temp sensor interface
   tri1                            TMP_SCL;
@@ -52,26 +53,40 @@ module tb_temp_flt;
     $display("[%0t] Simulation starting...", $time);
     $display("========================================");
 
-    SW   = '0;
-    TEMP = {9'd20, 4'd8, 3'b000};  // 20.5 °C
-    $display("[%0t] Phase 1: Waiting for 20.5°C (Filling FIFO)...", $time);
+    // --- PHASE 1: Celsius Mode with Positive Temp ---
+    SW   = 2'b00;  // Celsius Mode
+    TEMP = {9'd20, 4'd8, 3'b000};  // +20.5 °C
+    $display("[%0t] Phase 1: Testing Celsius with +20.5 C (Filling FIFO)...", $time);
     repeat (100000) @(posedge clk);
 
-    SW = '1;
-    $display("[%0t] Phase 2: SW=1 set (Testing Fahrenheit conversion)...", $time);
+    // --- PHASE 2: Fahrenheit Mode with Positive Temp ---
+    SW = 2'b01;  // Fahrenheit Mode
+    $display("[%0t] Phase 2: SW set to 01 (Testing Fahrenheit conversion)...", $time);
     repeat (100000) @(posedge clk);
 
+    // --- PHASE 3: Kelvin Mode with Positive Temp ---
+    SW = 2'b10;  // Kelvin Mode
+    $display("[%0t] Phase 3: SW set to 10 (Testing Kelvin conversion with +20.5 C)...", $time);
+    repeat (100000) @(posedge clk);
+
+    // --- PHASE 4: Celsius Mode with Negative Temp ---
     TEMP = {-9'sd20, 4'd8, 3'b000};  // -20.5 °C
-    SW   = '0;
-    $display("[%0t] Phase 3: Waiting for -20.5°C...", $time);
+    SW   = 2'b00;  // Celsius Mode
+    $display("[%0t] Phase 4: Testing Celsius with -20.5 C...", $time);
     repeat (100000) @(posedge clk);
 
-    SW = '1;
-    $display("[%0t] Phase 4: Testing Fahrenheit for negative temperature...", $time);
+    // --- PHASE 5: Fahrenheit Mode with Negative Temp ---
+    SW = 2'b01;  // Fahrenheit Mode
+    $display("[%0t] Phase 5: SW set to 01 (Testing Fahrenheit for negative temperature)...", $time);
+    repeat (100000) @(posedge clk);
+
+    // --- PHASE 6: Kelvin Mode with Negative Temp ---
+    SW = 2'b10;  // Kelvin Mode
+    $display("[%0t] Phase 6: SW set to 10 (Testing Kelvin for negative temperature)...", $time);
     repeat (100000) @(posedge clk);
 
     $display("========================================");
-    $display("[%0t] Test completed successfully! Calling $stop.", $time);
+    $display("[%0t] Challenge test completed successfully! Calling $stop.", $time);
     $display("========================================");
     $stop;
   end
@@ -106,14 +121,18 @@ module tb_temp_flt;
   );
 
   // Monitor to display encoded value only when it changes
-  logic [31:0] prev_encoded = '0;
+  logic [NUM_SEGMENTS-1:0][3:0] monitor_encoded;
+  logic [            31:0]      prev_encoded = '0;
+
+  // Safely hook into the internal multi-dimensional vector
+  assign monitor_encoded = u_i2c_temp.encoded;
+
   always @(posedge clk) begin
-    if (u_i2c_temp.encoded !== prev_encoded) begin
+    if (monitor_encoded !== prev_encoded) begin
       $display("[%0t ns] New Encoded Value: %0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d", $time / 1000.0,
-               u_i2c_temp.encoded[7], u_i2c_temp.encoded[6], u_i2c_temp.encoded[5],
-               u_i2c_temp.encoded[4], u_i2c_temp.encoded[3], u_i2c_temp.encoded[2],
-               u_i2c_temp.encoded[1], u_i2c_temp.encoded[0]);
-      prev_encoded = u_i2c_temp.encoded;
+               monitor_encoded[7], monitor_encoded[6], monitor_encoded[5], monitor_encoded[4],
+               monitor_encoded[3], monitor_encoded[2], monitor_encoded[1], monitor_encoded[0]);
+      prev_encoded = monitor_encoded;
     end
   end
 
