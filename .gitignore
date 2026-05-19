@@ -1,6 +1,4 @@
-# --- Vivado Genel Temizlik ---
-
-# İsmi ne olursa olsun bu uzantıyla biten klasörleri her yerde engelle
+# --- Vivado Workspaces & Generated Directories ---
 **/*.cache/
 **/*.hw/
 **/*.sim/
@@ -10,17 +8,18 @@
 **/*.gen/
 **/*.dcp
 
-# Vivado'nun ana dizine kustuğu log ve journal dosyaları
+# --- Temporary Vivado Tool Outputs ---
 *.log
 *.jou
 *.str
 *.pb
 *.vdi
-
-# Geçici dizinler
 .Xil/
 **/.Xil/
 
-
+# --- Xilinx IP Whitelisting Infrastructure ---
 **/ip/**/*
+!**/ip/**/
 !**/ip/**/*.xci
+**/ip/**/*.log
+**/ip/**/*.xml
