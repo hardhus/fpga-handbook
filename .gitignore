@@ -23,3 +23,23 @@
 !**/ip/**/*.xci
 **/ip/**/*.log
 **/ip/**/*.xml
+
+# --- Block Design & IP Repository Cleanup ---
+**/hdl/**/*.hwh
+**/hdl/**/*.bda
+**/hdl/**/*.bxml
+**/hdl/**/*.veo
+**/hdl/**/*.vho
+**/hdl/**/*_ooc.xdc
+**/hdl/**/*.protoinst
+**/hdl/**/*.hwdef
+**/hdl/**/*.ui
+**/hdl/**/sim/
+**/hdl/**/synth/
+**/hdl/**/hdl/*_wrapper.v
+**/hdl/**/ipshared/
+
+
+**/ip/**/synth/
+**/ip/**/sim/
+**/ip/**/doc/
